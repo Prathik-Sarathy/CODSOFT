@@ -1,33 +1,63 @@
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Scanner;
-public class CurrencyConverter 
+public class currency 
 {
+    private static final String API_URL = "https://api.exchangerate-api.com/v4/latest/";
+    public static double getExchangeRate(String baseCurrency, String targetCurrency) throws Exception 
+    {
+        String urlString = API_URL + baseCurrency;
+        URL url = new URL(urlString);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+        StringBuilder response = new StringBuilder();
+        String line;
+        while ((line = in.readLine()) != null) 
+        {
+            response.append(line);
+        }
+        in.close();
+        String responseString = response.toString();
+        String targetCurrencyKey = "\"" + targetCurrency + "\":";
+        int startIndex = responseString.indexOf(targetCurrencyKey) + targetCurrencyKey.length();
+        int endIndex = responseString.indexOf(",", startIndex);
+        if (endIndex == -1) endIndex = responseString.indexOf("}", startIndex);
+        String rateString = responseString.substring(startIndex, endIndex);
+        return Double.parseDouble(rateString);
+    }
+    public static double convertCurrency(String baseCurrency, String targetCurrency, double amount) throws Exception 
+    {
+        double rate = getExchangeRate(baseCurrency, targetCurrency);
+        return amount * rate;
+    }
     public static void main(String[] args) 
     {
-        String[] currencies = {"USD", "EUR", "GBP", "INR", "JPY"};
         Scanner scanner = new Scanner(System.in);
-        System.out.println("Select a base currency:");
-        String baseCurrency = scanner.nextLine();
-        System.out.println("Select a target currency:");
-        String targetCurrency = scanner.nextLine();
-        ExchangeRatesApi api = new ExchangeRatesApi();
-        double exchangeRate = api.getExchangeRate(baseCurrency, targetCurrency);
-        System.out.println("Enter the amount you want to convert:");
-        double amount = scanner.nextDouble();
-        double convertedAmount = convertCurrency(amount, exchangeRate);
-        System.out.printf("Converted amount: %.2f %s%n", convertedAmount, targetCurrency);
-    }
-    public static double convertCurrency(double amount, double exchangeRate) 
-    {
-        return amount * exchangeRate;
-    }
-}
-class ExchangeRatesApi 
-{
-    public double getExchangeRate(String baseCurrency, String targetCurrency) 
-    {
-        if (baseCurrency.equals("USD") && targetCurrency.equals("JPY")) {
-            return 110.0;
+        try 
+        {
+            System.out.print("Enter base currency (e.g., USD): ");
+            String baseCurrency = scanner.nextLine().toUpperCase();
+
+            System.out.print("Enter target currency (e.g., EUR): ");
+            String targetCurrency = scanner.nextLine().toUpperCase();
+
+            System.out.print("Enter amount to convert: ");
+            double amount = scanner.nextDouble();
+
+            double convertedAmount = convertCurrency(baseCurrency, targetCurrency, amount);
+            System.out.printf("%.2f %s is equivalent to %.2f %s%n", amount, baseCurrency, convertedAmount, targetCurrency);
+
+        } 
+        catch (Exception e) 
+        {
+            System.out.println("Error: " + e.getMessage());
+        } 
+        finally 
+        {
+            scanner.close();
         }
-        return 1.0;
     }
 }
